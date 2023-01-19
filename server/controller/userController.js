@@ -5,7 +5,13 @@ const cloudinary = require("../utils/cloudinary");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-const transport = nodemailer.createTransport({});
+const transport = nodemailer.createTransport({
+  service: "hotmail",
+  auth: {
+    user: "olorundasamuel@hotmail.com",
+    pass: "Developer2022@",
+  },
+});
 
 const getUsers = async (req, res) => {
   try {
@@ -105,13 +111,13 @@ const createUser = async (req, res) => {
     });
 
     const testURL = "http://localhost:3000/";
-    const mainURL = "";
+    const mainURL = "https://social-build.herokuapp.com/";
 
     const mailOption = {
-      from: "no-reply@gmail.com",
+      from: "olorundasamuel@hotmail.com",
       to: email,
       subject: "Account Verification",
-      html: `<h2> Hello ${fullName}, welcome to <strong> Social Build </strong>this is to verify your Account please   <a href="${testURL}/api/user/${user._id}/${token}">Click this Link</a> to Continue</h2>`,
+      html: `<h2> Hello ${fullName}, welcome to <strong> Social Build </strong>this is to verify your Account please   <a href="${mainURL}/api/user/${user._id}/${token}">Click this Link</a> to Continue</h2>`,
     };
 
     transport.sendMail(mailOption, (err, info) => {
@@ -125,7 +131,7 @@ const createUser = async (req, res) => {
     res.status(200).json({ massage: "Chenk your Mail to continue..." });
   } catch (error) {
     res.status(404).json({
-      message: error.message,
+      message: error,
     });
   }
 };
@@ -178,12 +184,12 @@ const signInUser = async (req, res) => {
               isVerified: user.isVerified,
             },
             "thiSIStheBestWeEk",
-            { expiresIn: "20m" }
+            { expiresIn: "2d" }
           );
 
           const { password, ...info } = user._doc;
 
-          res.status(200).json({
+          res.status(201).json({
             message: `Welcome ${user.fullName}`,
             data: { token, ...info },
           });
@@ -230,6 +236,54 @@ const signInUser = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await userModel.findOne({ email });
+
+    if (user) {
+      if (user.isVerified && user.verifiedToken === "") {
+        const getToken = crypto.randomBytes(32).toString("hex");
+        const token = jwt.sign({ getToken }, "thiSIStheBestWeEk", {
+          expiresIn: "20m",
+        });
+
+        const testURL = "http://localhost:3000/";
+        const mainURL = "";
+
+        const mailOption = {
+          from: "no-reply@gmail.com",
+          to: email,
+          subject: "Reset Password Request",
+          html: `<h2> Hello ${user.fullName}, this is a reset password request for  your Account please   <a href="${testURL}/api/user/${user._id}/${token}">Click this Link</a> to Complet the process</h2>`,
+        };
+
+        transport.sendMail(mailOption, (err, info) => {
+          if (err) {
+            console.log(err.message);
+          } else {
+            console.log("Mail Sent", info.response);
+          }
+        });
+
+        res.status(200).json({ massage: "Chenk your Mail to continue..." });
+      } else {
+        res.status(404).json({
+          message: "Cannot Perform Operation",
+        });
+      }
+    } else {
+      res.status(404).json({
+        message: "Cannot find Email",
+      });
+    }
+  } catch (error) {
+    res.status(404).json({
+      message: error.message,
+    });
+  }
+};
+
 // const editUser = async(req, res) => {
 //     try {
 //         const {fullName}
@@ -247,4 +301,6 @@ module.exports = {
   editUser,
   createUser,
   verifyUser,
+  signInUser,
+  forgotPassword,
 };
